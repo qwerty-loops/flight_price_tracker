@@ -22,7 +22,7 @@ for index, row in alerts.iterrows():
         if ca:
             print(f"Alert triggered for row {index}: {row['origin']} → {row['destination']} | {row['date_from']} | {row['trip_type']} | ${row['target_price']}")
             print(f"Cheapest flight now: {df['price'].min()}")
-            # delete_alert(row['rowid'])
+            delete_alert(row['rowid'])
             print("Alert removed successfully.")
 
         else:

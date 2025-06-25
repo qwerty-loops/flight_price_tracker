@@ -127,11 +127,21 @@ with tab2:
                 )
 
                 fig.update_layout(
-                    xaxis=dict(autorange="reversed", title="Days Ago"),
-                    yaxis_title="Price ($)",
-                    hovermode="x unified",
-                    template="plotly_dark",
-                    height=400,
+                xaxis=dict(
+                    autorange="reversed",
+                    title="Days Ago",
+                    showspikes=True,
+                    spikemode="across",
+                    spikesnap="cursor",
+                    showline=True,
+                    spikedash="solid",
+                    spikecolor="white",    
+                    spikethickness=1
+                ),
+                yaxis_title="Price ($)",
+                hovermode="x unified",
+                template="plotly_dark",
+                height=400,
                 )
 
                 fig.add_trace(go.Scatter(

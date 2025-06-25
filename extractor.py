@@ -1,11 +1,12 @@
 from serpapi import GoogleSearch
+import streamlit as st
 import os
 from dotenv import load_dotenv
 load_dotenv()
 
 
 def extract_flights(origin, destination, date_from, date_to, max_layovers, round_trip):
-    api_key = os.getenv("SERPAPI_KEY")
+    api_key = os.getenv("SERPAPI_KEY") or st.secrets.get("SERPAPI_KEY")
     if not api_key:
         return [],None, "", ""
     params = {
