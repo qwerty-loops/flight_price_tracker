@@ -1,0 +1,6 @@
+serpapi
+python-dotenv
+pandas
+streamlit
+twilio
+plotly
