@@ -6,6 +6,8 @@ def transform_flights(flights):
     for flight in flights:
         price = flight.get("total_price") or flight.get("price")
         legs = flight.get("flights") or []
+        if price is None:
+            continue
         rows.append({
             "airline": legs[0]["airline"],
             "price": float(price),
