@@ -11,6 +11,17 @@ from notifications import check_alert
 st.set_page_config(page_title="Flight Price Tracker", layout="centered")
 st.title("✈️ Flight Price Tracker")
 
+with st.sidebar:
+    st.header("📧 Notification Preferences")
+    if "user_email" not in st.session_state:
+        st.session_state["user_email"] = ""
+    if "user_phone" not in st.session_state:
+        st.session_state["user_phone"] = ""
+
+    st.session_state["user_email"] = st.text_input("Your Email", value=st.session_state["user_email"], placeholder= "you@example.com")
+    st.session_state["user_phone"] = st.text_input("Your Mobile Number (with country code)", value=st.session_state["user_phone"], placeholder= "+1234567890")
+
+
 tab1, tab2, tab3 = st.tabs(["🔍 Search Flights", "📈 Price Insights", "🔔 Manage Alerts"])
 
 with tab1:
@@ -41,6 +52,13 @@ with tab1:
             response_flag = False
         if trip_type == "Round-Trip" and date_to and date_to < date_from:
             st.warning("Return date cannot be before departure date.", icon="⚠️")
+            response_flag = False
+
+        if not st.session_state["user_email"] or "@" not in st.session_state["user_email"]:
+            st.warning("Please enter a valid email address in the sidebar.", icon="⚠️")
+            response_flag = False
+        if not st.session_state["user_phone"] or not st.session_state["user_phone"].startswith("+") or len(st.session_state["user_phone"]) < 10:
+            st.warning("Please enter a valid phone number with country code in the sidebar.", icon="⚠️")
             response_flag = False
 
         if response_flag:
@@ -76,6 +94,8 @@ with tab1:
                         "max_layovers": max_layovers,
                         "target_price": target_price,
                         "timestamp"   : datetime.now().strftime("%Y-%m-%d %I:%M:%S %p"),
+                        "user_email": st.session_state["user_email"],
+                        "user_phone": st.session_state["user_phone"],
                     }
                     load_alert_preferences(alert) 
                 else:
@@ -87,10 +107,10 @@ with tab2:
     st.subheader("Flight Price Insights")
     col1, col2, col3 = st.columns(3)
     lp = st.session_state.get("price_insights",None)
-    if lp is None:
+    if lp is None or lp == []:
         st.info("Please search for flights in Tab 1 to see insights.", icon="⚠️")
     else:
-        price_history = lp['price_history'] if lp else []   
+        price_history = lp['price_history'] if lp else []
         delta_map = {
         'low': ("Great Deal", "normal","Great time to book!"),
         'typical': ("Average", "off"," Prices are typical for this route."), 

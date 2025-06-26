@@ -18,7 +18,9 @@ for index, row in alerts.iterrows():
 
     if flights:
         df = transform_flights(flights)
-        ca = check_alert(df, row['target_price'], booking_link, generic_link)
+        email = row['user_email'] if row['user_email'] else None
+        phone = row['user_phone'] if row['user_phone'] else None
+        ca = check_alert(df, row['target_price'], booking_link, generic_link, email, phone)
         if ca:
             print(f"Alert triggered for row {index}: {row['origin']} → {row['destination']} | {row['date_from']} | {row['trip_type']} | ${row['target_price']}")
             print(f"Cheapest flight now: {df['price'].min()}")

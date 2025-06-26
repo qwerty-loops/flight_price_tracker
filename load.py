@@ -24,7 +24,9 @@ def load_alert_preferences(data):
             max_layovers INTEGER,
             target_price REAL,
             timestamp TEXT,
-            UNIQUE(origin, destination, date_from, date_to, trip_type, max_layovers, target_price)
+            user_email TEXT,
+            user_phone TEXT,
+            UNIQUE(origin, destination, date_from, date_to, trip_type, max_layovers, target_price, user_email, user_phone)
         )""")
         
         normalized_data = (
@@ -35,10 +37,12 @@ def load_alert_preferences(data):
             str(data["trip_type"]).strip(),
             int(data["max_layovers"]),
             float(data["target_price"]),
-            data["timestamp"]
+            data["timestamp"],
+            str(data["user_email"]).strip(),
+            str(data["user_phone"]).strip()
         )
 
-        conn.execute("""INSERT OR IGNORE INTO alerts VALUES (?, ?, ?, ?, ?, ?, ?, ?)""", normalized_data)
+        conn.execute("""INSERT OR IGNORE INTO alerts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", normalized_data)
         conn.commit()
         if conn.total_changes == 0:
             st.warning("Alert already exists with the same parameters.")
