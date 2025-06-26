@@ -28,7 +28,7 @@ def load_alert_preferences(data):
             user_phone TEXT,
             UNIQUE(origin, destination, date_from, date_to, trip_type, max_layovers, target_price, user_email, user_phone)
         )""")
-        
+
         normalized_data = (
             str(data["origin"]).strip(),
             str(data["destination"]).strip(), 
@@ -44,6 +44,7 @@ def load_alert_preferences(data):
 
         conn.execute("""INSERT OR IGNORE INTO alerts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", normalized_data)
         conn.commit()
+
         if conn.total_changes == 0:
             st.warning("Alert already exists with the same parameters.")
         else:
@@ -56,7 +57,22 @@ def load_alert_preferences(data):
 def load_alerts():
     if not os.path.exists(DB_PATH):
         return pd.DataFrame()
+    
     conn = sqlite3.connect(DB_PATH)
+    conn.execute("""CREATE TABLE IF NOT EXISTS alerts (
+        origin TEXT,
+        destination TEXT,
+        date_from TEXT,
+        date_to TEXT,
+        trip_type TEXT,
+        max_layovers INTEGER,
+        target_price REAL,
+        timestamp TEXT,
+        user_email TEXT,
+        user_phone TEXT,
+        UNIQUE(origin, destination, date_from, date_to, trip_type, max_layovers, target_price, user_email, user_phone)
+    )""")
+    
     df = pd.read_sql("SELECT rowid, * FROM alerts", conn)
     conn.close()
     return df
