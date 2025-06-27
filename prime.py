@@ -62,7 +62,7 @@ with tab1:
             response_flag = False
 
         if response_flag:
-            with st.spinner(" Searching for flights..."):
+            with st.spinner("Searching for flights... This can take up to 15 seconds."):
                 flights, insights, booking_link , generic_link = extract_flights(
                     origin = origin.upper(),
                     destination=destination.upper(),
