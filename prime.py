@@ -72,6 +72,7 @@ with tab1:
                     round_trip =(trip_type == "Round-Trip")
                 )
 
+            print (f"Flights: {flights}")  # Debugging line to check API response
             if "error" in flights:
                 st.error(f"Error: {flights['error']}", icon="🚫")
 
@@ -82,24 +83,30 @@ with tab1:
                 st.session_state["booking_link"] = booking_link
                 st.session_state["generic_link"] = generic_link
                 df = transform_flights(flights)
-                load_flights(df)
-                st.dataframe(df[:5], hide_index=True, use_container_width=True,)
-                if target_price < df["price"].min():          # target is NOT yet reached
-                    alert = {
-                        "origin"      : origin.upper(),
-                        "destination" : destination.upper(),
-                        "date_from"   : date_from.strftime("%Y-%m-%d"),
-                        "date_to"     : date_to.strftime("%Y-%m-%d") if date_to else None,
-                        "trip_type"   : trip_type,
-                        "max_layovers": max_layovers,
-                        "target_price": target_price,
-                        "timestamp"   : datetime.now().strftime("%Y-%m-%d %I:%M:%S %p"),
-                        "user_email": st.session_state["user_email"],
-                        "user_phone": st.session_state["user_phone"],
-                    }
-                    load_alert_preferences(alert) 
+                if df.empty:
+                    st.warning("No flights found for the given criteria. Please adjust your search.", icon="⚠️")
                 else:
-                    st.info(f"No alert was saved since the current lowest price is already below your target (${target_price}).", icon="ℹ️")
+                    load_flights(df)
+                    if len(df) >= 5:
+                        st.dataframe(df[:5], hide_index=True, use_container_width=True)
+                    else:
+                        st.dataframe(df, hide_index=True, use_container_width=True)
+                    if target_price < df["price"].min():          # target is NOT yet reached
+                        alert = {
+                            "origin"      : origin.upper(),
+                            "destination" : destination.upper(),
+                            "date_from"   : date_from.strftime("%Y-%m-%d"),
+                            "date_to"     : date_to.strftime("%Y-%m-%d") if date_to else None,
+                            "trip_type"   : trip_type,
+                            "max_layovers": max_layovers,
+                            "target_price": target_price,
+                            "timestamp"   : datetime.now().strftime("%Y-%m-%d %I:%M:%S %p"),
+                            "user_email": st.session_state["user_email"],
+                            "user_phone": st.session_state["user_phone"],
+                        }
+                        load_alert_preferences(alert) 
+                    else:
+                        st.info(f"No alert was saved since the current lowest price is already below your target (${target_price}).", icon="ℹ️")
                 
 
 
@@ -195,21 +202,27 @@ with tab3:
         st.info("No alert preferences found.")
     else:
         for i, row in alerts.iterrows():
-            with st.expander(f"{row['origin']} → {row['destination']} | {row['date_from']} | {row['trip_type']} | ${row['target_price']}"):
+            formatted_date_from = datetime.fromisoformat(row['date_from']).strftime('%b %d, %Y')
+            formatted_date_to = datetime.fromisoformat(row['date_to']).strftime('%b %d, %Y') if row['date_to'] else "N/A"
+            formatted_timestamp = datetime.fromisoformat(row['timestamp']).strftime('%b %d, %Y %I:%M %p')
+            with st.expander(f"{row['origin']} → {row['destination']} | {formatted_date_from} | {row['trip_type']} | ${row['target_price']}"):
                 col1, col2, col3 = st.columns([2, 1, 1], gap="medium")
+                
                 with col1:
                     st.write(f"**Trip:** {row['trip_type']}")
                     st.write(f"**Max Layovers:** {row['max_layovers']}")
-                    st.write(f"**Return Date:** {row['date_to'] or 'N/A'}")
-                    st.write(f"**Set On:** {row['timestamp']}")
+                    st.write(f"**Return Date:** {formatted_date_to}")
+                    st.write(f"**Set On:** {formatted_timestamp}")
+
                 with col2:
-                    new_price = st.number_input(f"Update Price", min_value=50, value=int(row["target_price"]), key=f"price_{i}")
+                    new_price = st.number_input("Update Price", min_value=50, value=int(row["target_price"]), key=f"price_{i}")
                     if st.button("💾 Save", key=f"save_{i}"):
-                        update_alert_price(row['rowid'], new_price)
+                        update_alert_price(row['id'], new_price)
                         st.success("Alert updated.")
                         st.rerun()
+
                 with col3:
                     if st.button("🗑 Delete", key=f"del_{i}"):
-                        delete_alert(row['rowid'])
+                        delete_alert(row['id'])
                         st.warning("Alert deleted.")
                         st.rerun()

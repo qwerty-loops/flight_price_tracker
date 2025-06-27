@@ -30,10 +30,16 @@ def extract_flights(origin, destination, date_from, date_to, max_layovers, round
     flights = results.get("best_flights", []) + results.get("other_flights", [])
     insights = results.get("price_insights", [])
 
+    filtered_flights = []
+    for flight in flights:
+        legs = flight.get("flights") or []
+        if len(legs) - 1 <= max_layovers:  # Number of layovers = number of legs - 1
+            filtered_flights.append(flight)
+
     # Retrieving the first booking token
     booking_link = ""
-    if flights:
-        first_booking_token = flights[0].get("booking_token")
+    if filtered_flights:
+        first_booking_token = filtered_flights[0].get("booking_token")
         if first_booking_token:
             params["booking_token"] = first_booking_token
             try:
@@ -48,4 +54,4 @@ def extract_flights(origin, destination, date_from, date_to, max_layovers, round
     if round_trip and date_to:
         query += f"+returning+{date_to}"
     generic_link = generic_link +  query    
-    return flights, insights, booking_link , generic_link
+    return filtered_flights, insights, booking_link , generic_link

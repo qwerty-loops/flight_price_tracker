@@ -1,90 +1,99 @@
-import sqlite3
+from supabase import create_client, Client
 import pandas as pd
-import os
+import datetime
 import streamlit as st
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
-DB_PATH = "flight_prices_streamlit.db"
+SUPABASE_URL = os.getenv("SUPABASE_URL") or st.secrets.get("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY") or st.secrets.get("SUPABASE_KEY")
+
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def load_flights(df):
-    conn = sqlite3.connect(DB_PATH)
-    df.to_sql("flight_prices", conn, if_exists="append", index=False)
-    conn.commit()
-    conn.close()
+    records = df.to_dict(orient='records') # Print first 5 records for debugging
+    for record in records:
+        supabase.table("flight_prices").insert(record).execute()
+
 
 def load_alert_preferences(data):
     try:
-        conn = sqlite3.connect(DB_PATH)
-        conn.execute("""
-        CREATE TABLE IF NOT EXISTS alerts (
-            origin TEXT,
-            destination TEXT,
-            date_from TEXT,
-            date_to TEXT,
-            trip_type TEXT,
-            max_layovers INTEGER,
-            target_price REAL,
-            timestamp TEXT,
-            user_email TEXT,
-            user_phone TEXT,
-            UNIQUE(origin, destination, date_from, date_to, trip_type, max_layovers, target_price, user_email, user_phone)
-        )""")
+        # Normalize all inputs
+        data["origin"] = data["origin"].strip()
+        data["destination"] = data["destination"].strip()
+        data["trip_type"] = data["trip_type"].strip()
+        data["user_email"] = data["user_email"].strip()
+        data["user_phone"] = data["user_phone"].strip()
+        data["max_layovers"] = int(data["max_layovers"])
+        data["target_price"] = float(data["target_price"])
 
-        normalized_data = (
-            str(data["origin"]).strip(),
-            str(data["destination"]).strip(), 
-            str(data["date_from"]),
-            str(data["date_to"]),
-            str(data["trip_type"]).strip(),
-            int(data["max_layovers"]),
-            float(data["target_price"]),
-            data["timestamp"],
-            str(data["user_email"]).strip(),
-            str(data["user_phone"]).strip()
+        # Convert "None" string to real None for date_to
+        if not data.get("date_to") or data["date_to"] in ["None", "", None]:
+            data["date_to"] = None
+
+        # Ensure timestamp is set correctly
+        if not data.get("timestamp") or data["timestamp"] in ["None", "", None]:
+            from datetime import datetime
+            data["timestamp"] = datetime.now().isoformat()
+
+        # Check for duplicate
+        query = (
+            supabase.table("alerts")
+            .select("id")
+            .eq("origin", data["origin"])
+            .eq("destination", data["destination"])
+            .eq("date_from", data["date_from"])
+            .eq("trip_type", data["trip_type"])
+            .eq("max_layovers", data["max_layovers"])
+            .eq("target_price", data["target_price"])
+            .eq("user_email", data["user_email"])
+            .eq("user_phone", data["user_phone"])
         )
 
-        conn.execute("""INSERT OR IGNORE INTO alerts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", normalized_data)
-        conn.commit()
-
-        if conn.total_changes == 0:
-            st.warning("Alert already exists with the same parameters.")
+        # date_to can be null or a date
+        if data["date_to"] is None:
+            query = query.is_("date_to", None)
         else:
+            query = query.eq("date_to", data["date_to"])
+
+        existing = query.execute()
+
+        if existing.data and len(existing.data) > 0:
+            st.warning("Alert already exists with the same parameters.")
+            return
+
+        # Insert only if no duplicate
+        response = supabase.table("alerts").insert(data).execute()
+
+        if response.data:
             st.success("Alert saved.")
+        else:
+            st.warning("Alert could not be saved.")
     except Exception as e:
         st.warning(f"Error occurred: {e}")
-    finally:
-        conn.close()
+
 
 def load_alerts():
-    if not os.path.exists(DB_PATH):
+    try:
+        response = supabase.table("alerts").select("*").execute()
+        return pd.DataFrame(response.data)
+    except Exception as e:
+        st.warning(f"Failed to fetch alerts: {e}")
         return pd.DataFrame()
-    
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute("""CREATE TABLE IF NOT EXISTS alerts (
-        origin TEXT,
-        destination TEXT,
-        date_from TEXT,
-        date_to TEXT,
-        trip_type TEXT,
-        max_layovers INTEGER,
-        target_price REAL,
-        timestamp TEXT,
-        user_email TEXT,
-        user_phone TEXT,
-        UNIQUE(origin, destination, date_from, date_to, trip_type, max_layovers, target_price, user_email, user_phone)
-    )""")
-    
-    df = pd.read_sql("SELECT rowid, * FROM alerts", conn)
-    conn.close()
-    return df
 
 def delete_alert(rowid):
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute("DELETE FROM alerts WHERE rowid = ?", (rowid,))
-    conn.commit()
-    conn.close()
+    try:
+        supabase.table("alerts").delete().eq("id", rowid).execute()
+    except Exception as e:
+        st.warning(f"Failed to delete alert: {e}")
 
 def update_alert_price(rowid, new_price):
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute("UPDATE alerts SET target_price = ? WHERE rowid = ?", (new_price, rowid))
-    conn.commit()
-    conn.close()
+    try:
+        supabase.table("alerts").update({"target_price": new_price}).eq("id", rowid).execute()
+    except Exception as e:
+        st.warning(f"Failed to update alert: {e}")
+
+
+        

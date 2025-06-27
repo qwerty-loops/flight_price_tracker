@@ -33,5 +33,7 @@ jobs:
           EMAIL_APP_PASSWORD: ${{ secrets.EMAIL_APP_PASSWORD }}
           SET_SMS_ALERT: ${{ secrets.SET_SMS_ALERT }}
           SET_EMAIL_ALERT: ${{ secrets.SET_EMAIL_ALERT }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         run: |
           python scheduler.py
