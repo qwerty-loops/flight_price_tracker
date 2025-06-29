@@ -48,6 +48,13 @@ def check_alert(df, target_price, booking_link=None, generic_link=None, user_ema
 
     origin_to_destination = cheapest_flight['origin_to_destination']
 
+    print("DEBUG: Cheapest flight price:", price)
+    print("DEBUG: Target price:", target_price)
+    print("DEBUG: user_email:", user_email)
+    print("DEBUG: user_phone:", user_phone)
+    print("DEBUG: SET_SMS_ALERT:", os.getenv("SET_SMS_ALERT"))
+    print("DEBUG: SET_EMAIL_ALERT:", os.getenv("SET_EMAIL_ALERT"))
+
     if price <= target_price:
 
         # ✉️ SMS Message (Plain Text)
