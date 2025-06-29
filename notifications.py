@@ -27,6 +27,7 @@ def send_email(subject, body, to_email):
 
 def check_alert(df, target_price, booking_link=None, generic_link=None, user_email=None, user_phone=None):
     flag = False
+    print (df)
     if df.empty:
         return
 
