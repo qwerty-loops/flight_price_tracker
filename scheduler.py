@@ -19,7 +19,6 @@ for index, row in alerts.iterrows():
     if flights:
         print (flights)
         df = transform_flights(flights)
-        print(df)
         email = row['user_email'] if row['user_email'] else None
         phone = row['user_phone'] if row['user_phone'] else None
         ca = check_alert(df, row['target_price'], booking_link, generic_link, email, phone)
