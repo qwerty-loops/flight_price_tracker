@@ -8,6 +8,21 @@ from transformer import transform_flights
 from load import load_flights, load_alert_preferences, load_alerts, delete_alert, update_alert_price
 from notifications import check_alert
 
+url = "https://raw.githubusercontent.com/jpatokal/openflights/master/data/airports.dat"
+columns = [
+    "id", "name", "city", "country", "IATA", "icao",
+    "latitude", "longitude", "altitude", "timezone", "dst",
+    "tz_database", "type", "source"
+]
+
+@st.cache_data
+def load_airports():
+    df = pd.read_csv(url, header=None, names=columns)
+    df["label"] = df["city"] + " - " + df["name"] + " (" + df["IATA"] + ")"
+    return df
+airports_df = load_airports()
+currency_symbols = {"USD": "$", "EUR": "€", "GBP": "£", "INR": "₹", "JPY": "¥", "AUD": "A$", "CAD": "C$", "CNY": "¥", "CHF": "CHF", "RUB": "₽", "ZAR": "R"}
+
 st.set_page_config(page_title="Flight Price Tracker", layout="centered")
 st.title("✈️ Flight Price Tracker")
 
@@ -29,12 +44,26 @@ with tab1:
     trip_type = "Round-Trip" if is_round_trip else "One-Way"
 
     with st.form("search_form"):
-        origin = st.text_input("From (IATA Code)", "SEA")
-        destination = st.text_input("To (IATA Code)", "SJC")
+        origin_label = st.selectbox(
+            "Origin",
+            options = airports_df["label"].tolist(),
+            index=int(airports_df[airports_df["IATA"] == "SEA"].index[0]),
+            placeholder="Type to search airports...")
+        origin = airports_df.loc[airports_df["label"] == origin_label, "IATA"].values[0]
+        destination_label = st.selectbox(
+            "Destination",
+            options = airports_df["label"].tolist(),
+            index=int(airports_df[airports_df["IATA"] == "SJC"].index[0]),
+            placeholder="Type to search airports...")
+        destination = airports_df.loc[airports_df["label"] == destination_label, "IATA"].values[0]
         date_from = st.date_input("Departure Date")
         date_to = st.date_input("Return Date") if is_round_trip else None
         max_layovers = st.slider("Max Layovers", 0, 3, 1)
-        target_price = st.number_input("Target Price ($)", 50, 1000, 150)
+        target_price = st.number_input("Target Price", 50, 1000, 150)
+        currency_options = ["USD", "EUR", "GBP", "INR", "JPY"]
+        selected_currency = st.selectbox("Currency", currency_options, index=0)
+        st.session_state["currency"] = selected_currency
+        st.session_state["symbol"] = currency_symbols.get(selected_currency, "$")
         submit = st.form_submit_button("Search & Set Alert")
 
     if submit:
@@ -69,10 +98,9 @@ with tab1:
                     date_from = date_from.strftime("%Y-%m-%d"),
                     date_to = date_to.strftime("%Y-%m-%d") if date_to else None,
                     max_layovers=max_layovers,
-                    round_trip =(trip_type == "Round-Trip")
-                )
-
-            print (f"Flights: {flights}")  # Debugging line to check API response
+                    round_trip =(trip_type == "Round-Trip"),
+                    currency=selected_currency
+                )  # Debugging line to check API response
             if "error" in flights:
                 st.error(f"Error: {flights['error']}", icon="🚫")
 
@@ -100,6 +128,7 @@ with tab1:
                             "trip_type"   : trip_type,
                             "max_layovers": max_layovers,
                             "target_price": target_price,
+                            "currency"    : selected_currency,
                             "timestamp"   : datetime.now().strftime("%Y-%m-%d %I:%M:%S %p"),
                             "user_email": st.session_state["user_email"],
                             "user_phone": st.session_state["user_phone"],
@@ -124,10 +153,10 @@ with tab2:
         'high': ("Expensive", "inverse","Much better to wait or look for a better deal!"),
         }
         delta_text, delta_color, delta_obs = delta_map.get(lp['price_level'].lower(), (None, "normal", ""))
-        col1.metric(value = f"{lp['lowest_price']} $" if lp else "Search first in Tab 1 to see insights.",label = "Lowest Price",border=True)
+        symbol = st.session_state.get("symbol", "$")
+        col1.metric(value = f"{symbol}{lp['lowest_price']}" if lp else "Search first in Tab 1 to see insights.",label = "Lowest Price",border=True)
         col2.metric(value = f"{lp['price_level'].upper()}" if lp else "Search first in Tab 1 to see insights.",label = "Current Price level",border=True,delta=delta_text, delta_color=delta_color)
-        col3.metric(value = f"{lp['typical_price_range'][0]} $ - {lp['typical_price_range'][1]} $" if lp else "Search first in Tab 1 to see insights.",label = "Typical Price range",border=True)
-        
+        col3.metric(value = f"{symbol}{lp['typical_price_range'][0]} - {symbol}{lp['typical_price_range'][1]}" if lp else "Search first in Tab 1 to see insights.",label = "Typical Price range",border=True)
 
         options = ["Area Chart", "Histogram"]
         chart_type = st.selectbox(
@@ -175,7 +204,7 @@ with tab2:
                     x=df["days_ago"],
                     y=[lp['lowest_price']] * len(df),
                     mode="lines",
-                    name=f"Current Lowest Price: ${lp['lowest_price']}",
+                    name=f"Current Lowest Price: {symbol}{lp['lowest_price']}",
                     line=dict(dash="dash", color="red")
                 ))
 
@@ -187,14 +216,17 @@ with tab2:
                     x="price",
                     nbins=20,
                     title="🧮 Price Distribution (Across Last 60 days)",
-                    labels={"price": "Price ($)"},
+                    labels={"price": f"Price ({symbol})"},
                     template="plotly_dark",
                 )
                 fig_hist.update_traces(marker_color='purple', marker_line_color='white', marker_line_width=2)
                 fig_hist.update_layout(yaxis_title="Frequency")
                 st.plotly_chart(fig_hist, use_container_width=True)
 
-        st.subheader(f"Prices for this route typically range between {lp['typical_price_range'][0]} $ and {lp['typical_price_range'][1]} $. The current lowest price is {lp['lowest_price']} $, which is considered {delta_text}. {delta_obs}.")
+        st.subheader(
+    f"Prices for this route typically range between {symbol}{lp['typical_price_range'][0]} and {symbol}{lp['typical_price_range'][1]}. "
+    f"The current lowest price is {symbol}{lp['lowest_price']}, which is considered {delta_text}. {delta_obs}."
+    )
 
 with tab3:
     alerts = load_alerts()
@@ -205,7 +237,7 @@ with tab3:
             formatted_date_from = datetime.fromisoformat(row['date_from']).strftime('%b %d, %Y')
             formatted_date_to = datetime.fromisoformat(row['date_to']).strftime('%b %d, %Y') if row['date_to'] else "N/A"
             formatted_timestamp = datetime.fromisoformat(row['timestamp']).strftime('%b %d, %Y %I:%M %p')
-            with st.expander(f"{row['origin']} → {row['destination']} | {formatted_date_from} | {row['trip_type']} | ${row['target_price']}"):
+            with st.expander(f"{row['origin']} → {row['destination']} | {formatted_date_from} | {row['trip_type']} | {row['target_price']} {currency_symbols.get(row['currency'])} | {row['user_email']}"):
                 col1, col2, col3 = st.columns([2, 1, 1], gap="medium")
                 
                 with col1:

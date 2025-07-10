@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def extract_flights(origin, destination, date_from, date_to, max_layovers, round_trip):
+def extract_flights(origin, destination, date_from, date_to, max_layovers, round_trip, currency):
     api_key = os.getenv("SERPAPI_KEY") or st.secrets.get("SERPAPI_KEY")
     if not api_key:
         return [],None, "", ""
@@ -16,6 +16,7 @@ def extract_flights(origin, destination, date_from, date_to, max_layovers, round
         "outbound_date": date_from,
         "type": 1 if round_trip else 2,
         "max_stops": max_layovers,
+        "currency": currency,
         "api_key": api_key,
         "no_cache": True
     }

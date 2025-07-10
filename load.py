@@ -28,6 +28,7 @@ def load_alert_preferences(data):
         data["user_phone"] = data["user_phone"].strip()
         data["max_layovers"] = int(data["max_layovers"])
         data["target_price"] = float(data["target_price"])
+        data["currency"] = data["currency"].strip()
 
         # Convert "None" string to real None for date_to
         if not data.get("date_to") or data["date_to"] in ["None", "", None]:
@@ -48,6 +49,7 @@ def load_alert_preferences(data):
             .eq("trip_type", data["trip_type"])
             .eq("max_layovers", data["max_layovers"])
             .eq("target_price", data["target_price"])
+            .eq("currency", data["currency"])
             .eq("user_email", data["user_email"])
             .eq("user_phone", data["user_phone"])
         )
