@@ -59,7 +59,7 @@ with tab1:
         date_from = st.date_input("Departure Date")
         date_to = st.date_input("Return Date") if is_round_trip else None
         max_layovers = st.slider("Max Layovers", 0, 3, 1)
-        target_price = st.number_input("Target Price", 50, 1000, 150)
+        target_price = st.number_input("Target Price", 50, 2000, 150)
         currency_options = ["USD", "EUR", "GBP", "INR", "JPY"]
         selected_currency = st.selectbox("Currency", currency_options, index=0)
         st.session_state["currency"] = selected_currency
@@ -110,7 +110,8 @@ with tab1:
                 st.session_state["price_insights"] = insights
                 st.session_state["booking_link"] = booking_link
                 st.session_state["generic_link"] = generic_link
-                df = transform_flights(flights)
+                st.session_state["currency"] = selected_currency
+                df = transform_flights(flights,st.session_state["currency"])
                 if df.empty:
                     st.warning("No flights found for the given criteria. Please adjust your search.", icon="⚠️")
                 else:

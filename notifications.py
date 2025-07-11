@@ -25,12 +25,13 @@ def send_email(subject, body, to_email):
     server.sendmail(msg['From'], [msg['To']], msg.as_string())
     server.quit()
 
-def check_alert(df, target_price, booking_link=None, generic_link=None, user_email=None, user_phone=None):
+def check_alert(df, target_price, currency, booking_link=None, generic_link=None, user_email=None, user_phone=None):
     flag = False
     if df.empty:
         return
 
     price = df['price'].min()
+    flight_currency = df.iloc[0]['currency']
     cheapest_flight = df[df['price'] == price].iloc[0]
 
     departure_time_raw = cheapest_flight['departure_time']
@@ -55,7 +56,7 @@ def check_alert(df, target_price, booking_link=None, generic_link=None, user_ema
     print("DEBUG: SET_SMS_ALERT:", os.getenv("SET_SMS_ALERT"))
     print("DEBUG: SET_EMAIL_ALERT:", os.getenv("SET_EMAIL_ALERT"))
 
-    if price <= target_price:
+    if flight_currency == currency and price <= target_price:
 
         # ✉️ SMS Message (Plain Text)
         sms_message = (

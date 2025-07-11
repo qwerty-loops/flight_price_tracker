@@ -1,7 +1,7 @@
 import pandas as pd
 from datetime import datetime
 
-def transform_flights(flights):
+def transform_flights(flights,currency="USD"):
     rows = []
     for flight in flights:
         if not isinstance(flight, dict):
@@ -27,6 +27,7 @@ def transform_flights(flights):
         rows.append({
             "airline": legs[0]["airline"],
             "price": float(price),
+            "currency": currency,
             "duration_min": flight.get("total_duration"),
             "layovers": len(legs) - 1,
             "layover_info": "; ".join(layover_details) if layover_details else "None",
@@ -37,7 +38,7 @@ def transform_flights(flights):
         })
 
     columns = [
-        "airline", "price", "duration_min", "layovers",
+        "airline", "price", "currency", "duration_min", "layovers",
         "layover_info", "origin_to_destination", "departure_time",
         "arrival_time", "timestamp"
     ]
