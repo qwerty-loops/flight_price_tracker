@@ -29,6 +29,14 @@ def load_alert_preferences(data):
         data["max_layovers"] = int(data["max_layovers"])
         data["target_price"] = float(data["target_price"])
         data["currency"] = data["currency"].strip()
+        pc = data.get("preferred_carriers")
+        if pc and isinstance(pc, list):
+            data["preferred_carriers"] = pc if "Any" not in pc else None
+        else:
+            data["preferred_carriers"] = None
+
+        if data["preferred_carriers"] is not None:
+            data["preferred_carriers"] = "{" + ",".join(data["preferred_carriers"]) + "}"
 
         # Convert "None" string to real None for date_to
         if not data.get("date_to") or data["date_to"] in ["None", "", None]:
@@ -59,6 +67,11 @@ def load_alert_preferences(data):
             query = query.is_("date_to", None)
         else:
             query = query.eq("date_to", data["date_to"])
+
+        if data["preferred_carriers"] is None:
+            query = query.is_("preferred_carriers", None)
+        else:
+            query = query.eq("preferred_carriers", data["preferred_carriers"])
 
         existing = query.execute()
 

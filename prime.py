@@ -34,7 +34,7 @@ with st.sidebar:
         st.session_state["user_phone"] = ""
 
     st.session_state["user_email"] = st.text_input("Your Email", value=st.session_state["user_email"], placeholder= "you@example.com")
-    st.session_state["user_phone"] = st.text_input("Your Mobile Number (with country code)", value=st.session_state["user_phone"], placeholder= "+1234567890")
+    st.session_state["user_phone"] = st.text_input("Your Mobile Number (with country code)", value=st.session_state["user_phone"], placeholder= "+12345678900", max_chars=12)
 
 
 tab1, tab2, tab3 = st.tabs(["🔍 Search Flights", "📈 Price Insights", "🔔 Manage Alerts"])
@@ -59,9 +59,14 @@ with tab1:
         date_from = st.date_input("Departure Date")
         date_to = st.date_input("Return Date") if is_round_trip else None
         max_layovers = st.slider("Max Layovers", 0, 3, 1)
-        target_price = st.number_input("Target Price", 50, 2000, 150)
+        target_price = st.number_input("Target Price", 50, 5000, 150)
         currency_options = ["USD", "EUR", "GBP", "INR", "JPY"]
         selected_currency = st.selectbox("Currency", currency_options, index=0)
+        preferred_carriers = st.multiselect(
+        "Preferred Airlines (Optional)",
+        options=["Any", "Alaska", "Air India", "Emirates", "Etihad", "Oman Air", "Qatar Airways", "Delta", "United", "Lufthansa", "British Airways", "Singapore Airlines", "American Airlines", "Air Canada", "JetBlue", "Spirit", "Southwest", "Air France", "KLM", "Turkish Airlines", "IndiGo", "SpiceJet", "Vistara"],
+        default=["Any"]
+        )
         st.session_state["currency"] = selected_currency
         st.session_state["symbol"] = currency_symbols.get(selected_currency, "$")
         submit = st.form_submit_button("Search & Set Alert")
@@ -99,8 +104,11 @@ with tab1:
                     date_to = date_to.strftime("%Y-%m-%d") if date_to else None,
                     max_layovers=max_layovers,
                     round_trip =(trip_type == "Round-Trip"),
-                    currency=selected_currency
+                    currency=selected_currency,
+                    preferred_carriers=preferred_carriers if "Any" not in preferred_carriers else None
                 )  # Debugging line to check API response
+
+            # print(flights)  # Debugging line to check API response
             if "error" in flights:
                 st.error(f"Error: {flights['error']}", icon="🚫")
 
@@ -112,6 +120,10 @@ with tab1:
                 st.session_state["generic_link"] = generic_link
                 st.session_state["currency"] = selected_currency
                 df = transform_flights(flights,st.session_state["currency"])
+
+                if preferred_carriers and "Any" not in preferred_carriers:
+                    df = df[df["airline"].isin(preferred_carriers)]
+
                 if df.empty:
                     st.warning("No flights found for the given criteria. Please adjust your search.", icon="⚠️")
                 else:
@@ -130,6 +142,7 @@ with tab1:
                             "max_layovers": max_layovers,
                             "target_price": target_price,
                             "currency"    : selected_currency,
+                            "preferred_carriers": preferred_carriers if "Any" not in preferred_carriers else None,
                             "timestamp"   : datetime.now().strftime("%Y-%m-%d %I:%M:%S %p"),
                             "user_email": st.session_state["user_email"],
                             "user_phone": st.session_state["user_phone"],
@@ -246,6 +259,7 @@ with tab3:
                     st.write(f"**Max Layovers:** {row['max_layovers']}")
                     st.write(f"**Return Date:** {formatted_date_to}")
                     st.write(f"**Set On:** {formatted_timestamp}")
+                    st.write(f"**Preferred Airlines:** {row['preferred_carriers'] if row['preferred_carriers'] else 'Any'}")
 
                 with col2:
                     new_price = st.number_input("Update Price", min_value=50, value=int(row["target_price"]), key=f"price_{i}")

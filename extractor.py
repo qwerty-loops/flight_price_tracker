@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def extract_flights(origin, destination, date_from, date_to, max_layovers, round_trip, currency):
+def extract_flights(origin, destination, date_from, date_to, max_layovers, round_trip, currency, preferred_carriers=None):
     api_key = os.getenv("SERPAPI_KEY") or st.secrets.get("SERPAPI_KEY")
     if not api_key:
         return [],None, "", ""
@@ -23,14 +23,26 @@ def extract_flights(origin, destination, date_from, date_to, max_layovers, round
     if round_trip and date_to:
         params["return_date"] = date_to
 
-    results = GoogleSearch(params).get_dict()  # Debugging line to check API response
-
+    results = GoogleSearch(params).get_dict()  # Debugging line to check API response # Debugging line to check API response
     if "error" in results:
         return {"error": results["error"]}, None , None , None 
     
-    flights = results.get("best_flights", []) + results.get("other_flights", [])
+    flights = results.get("best_flights", []) + results.get("other_flights", [])  # Debugging line to check API response
     insights = results.get("price_insights", [])
 
+    if preferred_carriers and "Any" not in preferred_carriers:
+        filtered_by_carrier = []
+        for flight in flights:
+            flight_legs = flight.get("flights", [])
+            if flight_legs:
+                # Get the airline from the first leg (main carrier)
+                airline = flight_legs[0].get("airline")
+                print(f"DEBUG: Checking airline {airline} against preferred carriers {preferred_carriers}")
+                if airline in preferred_carriers:
+                    filtered_by_carrier.append(flight)
+        flights = filtered_by_carrier
+
+    print(flights)
     filtered_flights = []
     for flight in flights:
         legs = flight.get("flights") or []

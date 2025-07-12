@@ -15,10 +15,14 @@ for index, row in alerts.iterrows():
         max_layovers=row['max_layovers'],
         round_trip=(row['trip_type'] == 'Round-Trip'),
         currency=row['currency'],
+        preferred_carriers = row.get("preferred_carriers")
     )
 
     if flights:
         df = transform_flights(flights,currency=row['currency'])
+        preferred_carriers = row.get('preferred_carriers')
+        if preferred_carriers and "Any" not in preferred_carriers:
+                    df = df[df["airline"].isin(preferred_carriers)]
         email = row['user_email'] if row['user_email'] else None
         phone = row['user_phone'] if row['user_phone'] else None
         ca = check_alert(df, row['target_price'], row['currency'], booking_link, generic_link, email, phone)

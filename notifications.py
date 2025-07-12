@@ -60,7 +60,7 @@ def check_alert(df, target_price, currency, booking_link=None, generic_link=None
 
         # ✉️ SMS Message (Plain Text)
         sms_message = (
-        f"Flight deal alert! : ${price:.0f} (target {target_price})\n"
+        f"Flight deal alert! : {flight_currency}{price:.0f} (target {flight_currency}{target_price})\n"
         )
         if booking_link:
             sms_message += f"{booking_link}"
@@ -71,7 +71,7 @@ def check_alert(df, target_price, currency, booking_link=None, generic_link=None
         html_message = f"""
         <p>✈️ <strong>Flight deal alert! </strong></p>
         <ul>
-            <li><strong>Price:</strong> ${price:.2f} (below your target of ${target_price})</li>
+            <li><strong>Price:</strong> {flight_currency}{price:.2f} (below your target of {flight_currency}{target_price})</li>
             <li><strong>Airline:</strong> {cheapest_flight['airline']}</li>
             <li><strong>Duration:</strong> {int(cheapest_flight['duration_min'] // 60)}h {int(cheapest_flight['duration_min'] % 60)}m</li>
             <li><strong>Layovers:</strong> {cheapest_flight['layovers']}</li>
