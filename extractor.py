@@ -42,7 +42,6 @@ def extract_flights(origin, destination, date_from, date_to, max_layovers, round
                     filtered_by_carrier.append(flight)
         flights = filtered_by_carrier
 
-    print(flights)
     filtered_flights = []
     for flight in flights:
         legs = flight.get("flights") or []
